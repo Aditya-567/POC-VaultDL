@@ -20,6 +20,18 @@ import uuid
 # --- 1. SETUP & CONFIGURATION ---
 # ==========================================
 
+def _resource_base_dir() -> str:
+    if getattr(sys, 'frozen', False):
+        return getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+def _first_existing(*candidates: str | None) -> str:
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return ''
+
 # Locate FFmpeg
 _FFMPEG_FALLBACK = os.path.join(
     os.environ.get("LOCALAPPDATA", ""),
@@ -27,10 +39,21 @@ _FFMPEG_FALLBACK = os.path.join(
     "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe",
     "ffmpeg-8.0.1-full_build", "bin"
 )
-FFMPEG_LOCATION = shutil.which("ffmpeg") and os.path.dirname(shutil.which("ffmpeg")) or _FFMPEG_FALLBACK
+_BUNDLED_TOOLS_DIR = os.path.join(_resource_base_dir(), "third_party")
+_BUNDLED_FFMPEG_BIN = os.path.join(_BUNDLED_TOOLS_DIR, "ffmpeg", "bin")
+_SYSTEM_FFMPEG = shutil.which("ffmpeg")
+FFMPEG_LOCATION = _first_existing(
+    _BUNDLED_FFMPEG_BIN,
+    os.path.dirname(_SYSTEM_FFMPEG) if _SYSTEM_FFMPEG else None,
+    _FFMPEG_FALLBACK,
+)
 
 _ARIA2_FALLBACK = os.path.join(os.environ.get("LOCALAPPDATA", ""), "aria2", "aria2c.exe")
-ARIA2_LOCATION = shutil.which("aria2c") or _ARIA2_FALLBACK
+ARIA2_LOCATION = _first_existing(
+    os.path.join(_BUNDLED_TOOLS_DIR, "aria2", "aria2c.exe"),
+    shutil.which("aria2c"),
+    _ARIA2_FALLBACK,
+)
 
 app = FastAPI(title="Ultimate Download API (YT + Torrents)")
 
@@ -163,6 +186,9 @@ async def trigger_download(request: DownloadRequest):
     format_id = request.format_id
     temp_dir = tempfile.mkdtemp()
 
+    if (format_id == "bestaudio_mp3" or "+" in format_id) and not os.path.exists(os.path.join(FFMPEG_LOCATION, "ffmpeg.exe")):
+        raise HTTPException(status_code=500, detail="FFmpeg binary not found. Rebuild app with bundled ffmpeg.")
+
     ydl_opts = {
         'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
         'restrictfilenames': True, 'noplaylist': True, 'ffmpeg_location': FFMPEG_LOCATION,
@@ -224,6 +250,9 @@ async def download_magnet_via_aria2(request: MagnetRequest):
     """Downloads the torrent via aria2, sends progress over WS, then streams the file."""
     magnet = request.magnet_link
     client_id = request.client_id
+
+    if not os.path.exists(ARIA2_LOCATION):
+        raise HTTPException(status_code=500, detail="aria2c binary not found. Rebuild app with bundled aria2.")
     
     if not magnet.startswith("magnet:"):
         raise HTTPException(status_code=400, detail="Invalid magnet link.")

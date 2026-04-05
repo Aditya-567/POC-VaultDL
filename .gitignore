@@ -51,6 +51,17 @@ dist-ssr/
 # Vite
 .vite/
 
+# ── Third-party binaries (downloaded by prepare-binaries.ps1) ───
+third_party/aria2/*.exe
+third_party/aria2/AUTHORS
+third_party/aria2/ChangeLog
+third_party/aria2/COPYING
+third_party/aria2/LICENSE.OpenSSL
+third_party/aria2/NEWS
+third_party/aria2/README.html
+third_party/aria2/README.mingw
+third_party/ffmpeg/bin/*.exe
+
 # ── Logs ─────────────────────────────────────────────────
 logs/
 *.log

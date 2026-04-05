@@ -107,6 +107,20 @@ npm run dev
 
 ---
 
+## Build Portable EXE (No End-User Installs)
+
+To produce a self-contained `VaultDL.exe` that bundles `aria2c` and `ffmpeg`:
+
+1. Run `build.bat` from the project root.
+2. The build now automatically downloads Windows binaries for `aria2c` and `ffmpeg` into `third_party/`.
+3. PyInstaller packages those binaries into the EXE runtime.
+
+Output: `dist/VaultDL.exe`
+
+Your end users only need to download and run the EXE.
+
+---
+
 ## How It Works
 
 1. Paste a YouTube (or other supported site) URL

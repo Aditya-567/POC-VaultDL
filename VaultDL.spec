@@ -3,6 +3,21 @@ import os
 
 block_cipher = None
 
+
+def collect_tree(src_dir, dst_root):
+    collected = []
+    if not os.path.isdir(src_dir):
+        return collected
+    for root, _, files in os.walk(src_dir):
+        rel_path = os.path.relpath(root, src_dir)
+        target_dir = dst_root if rel_path == '.' else os.path.join(dst_root, rel_path)
+        for file_name in files:
+            collected.append((os.path.join(root, file_name), target_dir))
+    return collected
+
+
+third_party_datas = collect_tree('third_party', 'third_party')
+
 a = Analysis(
     ['VaultDL.pyw'],
     pathex=[os.path.abspath('backend')],
@@ -12,7 +27,7 @@ a = Analysis(
         (os.path.join('frontend', 'dist'), os.path.join('frontend', 'dist')),
         # Bundle the backend Python source files
         (os.path.join('backend', 'main.py'), 'backend'),
-    ],
+    ] + third_party_datas,
     hiddenimports=[
         # uvicorn (used internally by flaskwebgui for FastAPI)
         'uvicorn',
